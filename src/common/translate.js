@@ -55,6 +55,7 @@ const sendRequestToGoogle = async (word, sourceLang, targetLang) => {
   return resultData;
 };
 
+
 const sendRequestToDeepL = async (word, sourceLang, targetLang) => {
   let params = new URLSearchParams();
   const authKey = getSettings("deeplAuthKey");
@@ -100,6 +101,72 @@ const sendRequestToDeepL = async (word, sourceLang, targetLang) => {
   return resultData;
 };
 
+const sendRequestToYoudao = async (word, sourceLang, targetLang) => {
+  const appKey = getSettings("youdaoAppKey");
+  const appSecret = getSettings("youdaoAppSecret");
+  const salt = Date.now();
+  const curtime = Math.floor(Date.now() / 1000);
+  const signStr = appKey + word + salt + curtime + appSecret;
+  const crypto = window.crypto || window.msCrypto;
+  let sign = "";
+  if (crypto && crypto.subtle) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(signStr);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    sign = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  } else {
+    // fallback: simple hash (not secure, for environments without crypto)
+    sign = btoa(signStr);
+  }
+  const params = {
+    q: word,
+    appKey,
+    salt,
+    from: sourceLang,
+    to: targetLang,
+    sign,
+    signType: "v3",
+    curtime
+  };
+  const url = "https://openapi.youdao.com/api";
+  const formBody = Object.keys(params).map(key => `${key}=${encodeURIComponent(params[key])}`).join("&");
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: formBody
+  }).catch(e => ({ status: 0, statusText: '' }));
+
+  const resultData = {
+    resultText: "",
+    candidateText: "",
+    sourceLanguage: sourceLang,
+    percentage: 1,
+    isError: false,
+    errorMessage: ""
+  };
+
+  if (!response || response.status !== 200) {
+    resultData.isError = true;
+    if (!response || response.status === 0) resultData.errorMessage = browser.i18n.getMessage("networkError");
+    else resultData.errorMessage = `${browser.i18n.getMessage("unknownError")} [${response.status} ${response.statusText}]`;
+    log.error(logDir, "sendRequestToYoudao()", response);
+    return resultData;
+  }
+  const result = await response.json();
+  if (result.errorCode && result.errorCode !== "0") {
+    resultData.isError = true;
+    resultData.errorMessage = result.errorCode;
+    log.error(logDir, "sendRequestToYoudao()", result);
+    return resultData;
+  }
+  resultData.resultText = result.translation ? result.translation.join("\n") : "";
+  if (result.basic && result.basic.explains) {
+    resultData.candidateText = result.basic.explains.join("\n");
+  }
+  log.log(logDir, "sendRequestToYoudao()", resultData);
+  return resultData;
+};
+
 
 export default async (sourceWord, sourceLang = "auto", targetLang) => {
   log.log(logDir, "tranlate()", sourceWord, targetLang);
@@ -118,9 +185,16 @@ export default async (sourceWord, sourceLang = "auto", targetLang) => {
   const cachedResult = await getHistory(sourceWord, sourceLang, targetLang, translationApi);
   if (cachedResult) return cachedResult;
 
-  const result = translationApi === "google" ?
-    await sendRequestToGoogle(sourceWord, sourceLang, targetLang) :
-    await sendRequestToDeepL(sourceWord, sourceLang, targetLang);
+  let result;
+  if (translationApi === "google") {
+    result = await sendRequestToGoogle(sourceWord, sourceLang, targetLang);
+  } else if (translationApi === "deepl") {
+    result = await sendRequestToDeepL(sourceWord, sourceLang, targetLang);
+  } else if (translationApi === "youdao") {
+    result = await sendRequestToYoudao(sourceWord, sourceLang, targetLang);
+  } else {
+    result = await sendRequestToGoogle(sourceWord, sourceLang, targetLang);
+  }
   setHistory(sourceWord, sourceLang, targetLang, translationApi, result);
   return result;
 };

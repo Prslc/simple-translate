@@ -89,6 +89,24 @@ export default [
             handleChange: () => updateLangsWhenChangeTranslationApi()
           },
           {
+            id: "translationApi",
+            title: "youdaoApiLabel",
+            captions: ["youdaoApiCaptionLabel"],
+            extraCaption:
+              React.createElement("p",
+                { className: "caption" },
+                React.createElement("a",
+                  {
+                    href: "https://ai.youdao.com/doc-trans-api.s#/?lang=en",
+                    target: "_blank"
+                  },
+                  browser.i18n.getMessage("howToUseYoudaoLabel"))
+              ),
+            type: "radio",
+            value: "youdao",
+            handleChange: () => updateLangsWhenChangeTranslationApi()
+          },
+          {
             id: "deeplPlan",
             title: "deeplPlanLabel",
             captions: ["deeplPlanCaptionLabel"],
@@ -115,6 +133,25 @@ export default [
             default: "",
             placeholder: "00000000-0000-0000-0000-00000000000000:fx",
             shouldShow: () => (getSettings("translationApi") === "deepl"),
+          }
+          ,
+          {
+            id: "youdaoAppKey",
+            title: "youdaoAppKeyLabel",
+            captions: ["youdaoAppKeyCaptionLabel"],
+            type: "text",
+            default: "",
+            placeholder: "Your Youdao AppKey",
+            shouldShow: () => (getSettings("translationApi") === "youdao"),
+          },
+          {
+            id: "youdaoAppSecret",
+            title: "youdaoAppSecretLabel",
+            captions: ["youdaoAppSecretCaptionLabel"],
+            type: "text",
+            default: "",
+            placeholder: "Your Youdao AppSecret",
+            shouldShow: () => (getSettings("translationApi") === "youdao"),
           }
         ]
       },
