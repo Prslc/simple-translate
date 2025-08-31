@@ -104,26 +104,30 @@ const sendRequestToDeepL = async (word, sourceLang, targetLang) => {
 const sendRequestToYoudao = async (word, sourceLang, targetLang) => {
   const appKey = getSettings("youdaoAppKey");
   const appSecret = getSettings("youdaoAppSecret");
-  const salt = Date.now();
-  const curtime = Math.floor(Date.now() / 1000);
-  const signStr = appKey + word + salt + curtime + appSecret;
-  const crypto = window.crypto || window.msCrypto;
-  let sign = "";
-  if (crypto && crypto.subtle) {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(signStr);
-    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    sign = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
-  } else {
-    // fallback: simple hash (not secure, for environments without crypto)
-    sign = btoa(signStr);
+  const salt = Date.now().toString();
+  const curtime = Math.floor(Date.now() / 1000).toString();
+  // Truncate logic per docs
+  function truncate(q) {
+    const len = q.length;
+    if (len <= 20) return q;
+    return q.substring(0, 10) + len + q.substring(len - 10, len);
   }
+  const input = truncate(word);
+  const signStr = appKey + input + salt + curtime + appSecret;
+  // Use SubtleCrypto for SHA256
+  async function sha256(str) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await (window.crypto.subtle.digest("SHA-256", data));
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+  const sign = await sha256(signStr);
   const params = {
     q: word,
-    appKey,
-    salt,
     from: sourceLang,
     to: targetLang,
+    appKey,
+    salt,
     sign,
     signType: "v3",
     curtime
@@ -160,9 +164,7 @@ const sendRequestToYoudao = async (word, sourceLang, targetLang) => {
     return resultData;
   }
   resultData.resultText = result.translation ? result.translation.join("\n") : "";
-  if (result.basic && result.basic.explains) {
-    resultData.candidateText = result.basic.explains.join("\n");
-  }
+  // Youdao v3 no longer returns basic.explains, so skip candidateText
   log.log(logDir, "sendRequestToYoudao()", resultData);
   return resultData;
 };

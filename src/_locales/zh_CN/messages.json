@@ -815,4 +815,26 @@
   "lang_zh": {
     "message": "中文"
   }
+  ,
+  "youdaoApiLabel": {
+    "message": "有道智云 API"
+  },
+  "youdaoApiCaptionLabel": {
+    "message": "使用有道智云翻译 API。需要注册并获取 AppKey 和 AppSecret。"
+  },
+  "howToUseYoudaoLabel": {
+    "message": "如何注册有道智云 API"
+  },
+  "youdaoAppKeyLabel": {
+    "message": "有道 AppKey"
+  },
+  "youdaoAppKeyCaptionLabel": {
+    "message": "请输入您的有道智云 AppKey。"
+  },
+  "youdaoAppSecretLabel": {
+    "message": "有道 AppSecret"
+  },
+  "youdaoAppSecretCaptionLabel": {
+    "message": "请输入您的有道智云 AppSecret。"
+  }
 }
